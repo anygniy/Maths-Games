@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>九九乘法大冒險 - 🐶 狗貓大對決 🐱</title>
+    <style>
+        :root {
+            --primary: #4ECDC4;
+            --secondary: #FF6B6B;
+            --accent: #FFE66D;
+            --dark: #2C3E50;
+            --light: #F7F9FC;
+            --success: #2ECC71;
+            --danger: #E74C3C;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #A8E6CF;
+            background-image: radial-gradient(#DCEDC8 20%, transparent 20%);
+            background-size: 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+            overflow: hidden;
+            border: 4px solid var(--dark);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 頂部列：生命值與得分 */
+        header {
+            background: var(--dark);
+            color: white;
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .lives-container {
+            display: flex;
+            gap: 4px;
+            font-size: 22px;
+        }
+
+        .score-container {
+            font-size: 20px;
+            color: var(--accent);
+            background: rgba(255,255,255,0.1);
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+
+        /* 戰鬥舞台 */
+        .battle-stage {
+            height: 170px;
+            background: linear-gradient(to bottom, #87CEEB 60%, #90EE90 60%);
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px 30px 20px 30px;
+        }
+
+        .avatar-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .avatar {
+            font-size: 65px;
+            transition: transform 0.2s ease;
+            filter: drop-shadow(0 6px 4px rgba(0,0,0,0.2));
+        }
+
+        .name-tag {
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* 對話框及特效 */
+        .dialog-bubble {
+            position: absolute;
+            background: white;
+            border: 2px solid var(--dark);
+            border-radius: 12px;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: bold;
+            top: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #hero-dialog { left: 20px; }
+        #boss-dialog { right: 20px; }
+
+        /* 動畫效果 */
+        .attack-hero { animation: attackRight 0.3s ease; }
+        .attack-boss { animation: attackLeft 0.3s ease; }
+        .shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes attackRight {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(60px) scale(1.2); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes attackLeft {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(-60px) scale(1.2); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        /* 倒數計時條 */
+        .timer-container {
+            width: 100%;
+            height: 12px;
+            background: #E0E0E0;
+            position: relative;
+        }
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--primary);
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+        .timer-warning {
+            background: var(--danger) !important;
+            animation: pulse 0.5s infinite alternate;
+        }
+        @keyframes pulse {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+
+        /* 題目與選項區域 */
+        .quiz-area {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: #FFF;
+        }
+
+        .question-box {
+            text-align: center;
+            background: #F0F4F8;
+            padding: 15px;
+            border-radius: 16px;
+            border: 2px dashed #BCCCDC;
+        }
+
+        .question-text {
+            font-size: 38px;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: 2px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .opt-btn {
+            background: var(--light);
+            border: 3px solid #CBD5E1;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 26px;
+            font-weight: bold;
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+            box-shadow: 0 4px 0 #CBD5E1;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .opt-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 transparent;
+        }
+
+        /* 結算畫面 (Game Over / Win) */
+        .modal {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(44, 62, 80, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .modal h2 { font-size: 36px; margin-bottom: 10px; }
+        .modal p { font-size: 20px; margin-bottom: 24px; color: var(--accent); }
+        
+        .restart-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #27AE60;
+            transition: all 0.2s;
+        }
+
+        .restart-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 transparent;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 頂部資訊欄 -->
+    <header>
+        <div class="lives-container" id="lives-display">❤️❤️❤️</div>
+        <div class="score-container">得分: <span id="score">0</span> / 100</div>
+    </header>
+
+    <!-- 戰鬥動畫舞台 -->
+    <div class="battle-stage" id="battle-stage">
+        <div class="dialog-bubble" id="hero-dialog">看我的！🐶</div>
+        <div class="avatar-box">
+            <div class="avatar" id="hero-avatar">🐶</div>
+            <div class="name-tag">小狗勇者</div>
+        </div>
+
+        <div class="dialog-bubble" id="boss-dialog">喵！答錯了吧🐱</div>
+        <div class="avatar-box">
+            <div class="avatar" id="boss-avatar">🐱</div>
+            <div class="name-tag">大魔王貓貓</div>
+        </div>
+    </div>
+
+    <!-- 5秒倒數計時條 -->
+    <div class="timer-container">
+        <div class="timer-bar" id="timer-bar"></div>
+    </div>
+
+    <!-- 題目與選擇題區域 -->
+    <div class="quiz-area">
+        <div class="question-box">
+            <div class="question-text" id="question-text">7 × 8 = ?</div>
+        </div>
+
+        <div class="options-grid">
+            <button class="opt-btn" onclick="checkAnswer(this)">56</button>
+            <button class="opt-btn" onclick="checkAnswer(this)">48</button>
+            <button class="opt-btn" onclick="checkAnswer(this)">64</button>
+            <button class="opt-btn" onclick="checkAnswer(this)">54</button>
+        </div>
+    </div>
+
+    <!-- 結算彈窗 -->
+    <div id="end-modal" class="modal hidden">
+        <h2 id="modal-title">恭喜通關！🎉</h2>
+        <p id="modal-desc">你獲得了 100 分！</p>
+        <button class="restart-btn" onclick="restartGame()">再玩一次 🔄</button>
+    </div>
+</div>
+
+<script>
+    // Web Audio API 聲音生成器
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (type === 'correct') {
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.15); // E5
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } else if (type === 'win') {
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(554.37, now + 0.1);
+            osc.frequency.setValueAtTime(659.25, now + 0.2);
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        }
+    }
+
+    // 遊戲狀態變數
+    let score = 0;
+    let lives = 3;
+    let currentCorrectAnswer = 0;
+    let deck = [];
+    let timerInterval = null;
+    const TIME_LIMIT = 5; // 5秒
+    let timeLeft = TIME_LIMIT;
+
+    // 剔除 1xN 與 Nx1 (只保留 2~9 乘以 2~9)
+    function generateDeck() {
+        let newDeck = [];
+        for (let i = 2; i <= 9; i++) {
+            for (let j = 2; j <= 9; j++) {
+                newDeck.push({ num1: i, num2: j, ans: i * j });
+            }
+        }
+        // 洗牌 (Fisher-Yates Shuffle)
+        for (let i = newDeck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+        }
+        return newDeck;
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = TIME_LIMIT;
+        updateTimerBar();
+
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeout();
+            } else {
+                updateTimerBar();
+            }
+        }, 100);
+    }
+
+    function updateTimerBar() {
+        const bar = document.getElementById('timer-bar');
+        const percentage = (timeLeft / TIME_LIMIT) * 100;
+        bar.style.width = percentage + '%';
+
+        if (timeLeft <= 2.0) {
+            bar.classList.add('timer-warning');
+        } else {
+            bar.classList.remove('timer-warning');
+        }
+    }
+
+    function nextQuestion() {
+        if (deck.length === 0) deck = generateDeck();
+        const currentQ = deck.pop();
+        currentCorrectAnswer = currentQ.ans;
+
+        document.getElementById('question-text').innerText = `${currentQ.num1} × ${currentQ.num2} = ?`;
+
+        // 生成 4 個選項（包含 1 個正確，3 個不重複干擾項）
+        let options = new Set([currentCorrectAnswer]);
+        while (options.size < 4) {
+            let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+            let wrongAns = currentCorrectAnswer + offset;
+            if (wrongAns > 0 && wrongAns <= 81 && wrongAns !== currentCorrectAnswer) {
+                options.add(wrongAns);
+            }
+        }
+
+        let optionsArray = Array.from(options);
+        // 洗牌選項
+        optionsArray.sort(() => Math.random() - 0.5);
+
+        const buttons = document.querySelectorAll('.opt-btn');
+        buttons.forEach((btn, index) => {
+            btn.innerText = optionsArray[index];
+            btn.disabled = false;
+        });
+
+        startTimer();
+    }
+
+    function checkAnswer(btn) {
+        clearInterval(timerInterval);
+        const selectedVal = parseInt(btn.innerText);
+        const hero = document.getElementById('hero-avatar');
+        const boss = document.getElementById('boss-avatar');
+        const stage = document.getElementById('battle-stage');
+
+        if (selectedVal === currentCorrectAnswer) {
+            // 答對 +5 分
+            score += 5;
+            playSound('correct');
+            hero.classList.add('attack-hero');
+            showBubble('hero-dialog', '答對了！💥');
+            setTimeout(() => hero.classList.remove('attack-hero'), 300);
+
+            if (score >= 100) {
+                score = 100;
+                updateUI();
+                setTimeout(() => endGame(true), 400);
+                return;
+            }
+        } else {
+            // 答錯 -2 分 & 扣生命
+            score = Math.max(0, score - 2);
+            lives--;
+            playSound('wrong');
+            boss.classList.add('attack-boss');
+            stage.classList.add('shake');
+            showBubble('boss-dialog', '哼！答錯囉 🐾');
+            setTimeout(() => {
+                boss.classList.remove('attack-boss');
+                stage.classList.remove('shake');
+            }, 400);
+
+            if (lives <= 0) {
+                updateUI();
+                setTimeout(() => endGame(false), 400);
+                return;
+            }
+        }
+
+        updateUI();
+        setTimeout(nextQuestion, 500);
+    }
+
+    function handleTimeout() {
+        score = Math.max(0, score - 2);
+        lives--;
+        playSound('wrong');
+        
+        const boss = document.getElementById('boss-avatar');
+        const stage = document.getElementById('battle-stage');
+        boss.classList.add('attack-boss');
+        stage.classList.add('shake');
+        showBubble('boss-dialog', '超時囉！⏰');
+        
+        setTimeout(() => {
+            boss.classList.remove('attack-boss');
+            stage.classList.remove('shake');
+        }, 400);
+
+        if (lives <= 0) {
+            updateUI();
+            setTimeout(() => endGame(false), 400);
+            return;
+        }
+
+        updateUI();
+        setTimeout(nextQuestion, 500);
+    }
+
+    function showBubble(id, text) {
+        const bubble = document.getElementById(id);
+        bubble.innerText = text;
+        bubble.style.opacity = '1';
+        setTimeout(() => bubble.style.opacity = '0', 1000);
+    }
+
+    function updateUI() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('lives-display').innerText = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+    }
+
+    function endGame(isWin) {
+        clearInterval(timerInterval);
+        const modal = document.getElementById('end-modal');
+        const title = document.getElementById('modal-title');
+        const desc = document.getElementById('modal-desc');
+
+        modal.classList.remove('hidden');
+        if (isWin) {
+            playSound('win');
+            title.innerText = '恭喜挑戰成功！🏆';
+            desc.innerText = `最終得分：${score} 分！你真是乘法大師！`;
+        } else {
+            title.innerText = '遊戲結束 😿';
+            desc.innerText = `最終得分：${score} 分。再接再厲！`;
+        }
+    }
+
+    function restartGame() {
+        score = 0;
+        lives = 3;
+        deck = generateDeck();
+        document.getElementById('end-modal').classList.add('hidden');
+        updateUI();
+        nextQuestion();
+    }
+
+    // 初始化遊戲
+    deck = generateDeck();
+    nextQuestion();
+</script>
+
+</body>
+</html>
